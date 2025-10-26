@@ -7,9 +7,8 @@ evaluation_local.py
 
 ## 🧠 전체 코드
 
-```python
-# 결과값  이미지: result1.png
-# 맵별 episode=10 결과값 이미지 result3.png
+```Bash
+
 import numpy as np
 import random
 import argparse
@@ -275,3 +274,4 @@ if __name__ == "__main__":
              shuffle_map=shuffle, map_num=args.map,
              env_control_config=env_control_config,
              reward_bonus_config=reward_bonus_config)
+
