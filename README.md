@@ -8,6 +8,8 @@ evaluation_local.py
 ## 🧠 전체 코드
 
 ```python
+# 결과값  이미지: result1.png
+# 맵별 episode=10 결과값 이미지 result3.png
 import numpy as np
 import random
 import argparse
@@ -52,7 +54,7 @@ ACTION_MAP = {
     30: [200, -30], 31: [200, -18], 32: [200, -6], 33: [200, 6], 34: [200, 18], 35: [200, 30]
 }
 
-RENDER = False
+RENDER = True
 
 # ----------------------------------------------------------------------
 # 🎮 행동 선택
@@ -113,12 +115,12 @@ def smoothness_reward(prev_action, curr_action):
         return 0.0
     d_angle = abs(curr_action[1] - prev_action[1])
     d_force = abs(curr_action[0] - prev_action[0])
-    smooth = 1.0 - 0.015 * d_angle - 0.002 * d_force
+    smooth = 1.0 - 0.015 * d_angle - 0.002 * d_force  # 강화된 감쇠
     return max(smooth, 0.0)
 
 def collision_penalty(info):
     if isinstance(info, dict) and info.get("collision", False):
-        return -10.0
+        return -10.0  # 감점 강화
     return 0.0
 
 # ----------------------------------------------------------------------
@@ -129,7 +131,7 @@ def run_game(env, algo_list, episode, shuffle_map, map_num,
 
     num_agents = len(algo_list)
     total_reward = np.zeros(num_agents, dtype=float)
-    num_win = np.zeros(num_agents + 1, dtype=int)
+    num_win = np.zeros(num_agents + 1, dtype=int)  # [A0 승, A1 승, 무승부]
     success_steps = [[] for _ in range(num_agents)]
     prev_action = None
 
@@ -142,12 +144,19 @@ def run_game(env, algo_list, episode, shuffle_map, map_num,
 
         step = 0
         while True:
+            # 🚀 초반 5스텝 강제 직진 (모든 맵 공통)
             if step < 1:
                 joint_action = []
                 for _ in algo_list:
-                    joint_action.append([[150.0], [0.0]])
+                    joint_action.append([[150.0], [0.0]])  # 힘=150, 각도=0 (직진)
             else:
                 joint_action = get_joint_actions(state, algo_list)
+
+            # 환경 제어
+            if env_control_config:
+                agent_idx = env_control_config['agent']
+                bounds = env_control_config['bounds']
+                joint_action = restrict_zone_env(state, joint_action, agent_idx, bounds)
 
             try:
                 next_state, reward, done, _, info = env.step(joint_action)
@@ -158,10 +167,17 @@ def run_game(env, algo_list, episode, shuffle_map, map_num,
 
             reward = np.array(reward, dtype=float)
 
+            # 추가 보상
             a0 = (joint_action[0][0][0], joint_action[0][1][0])
             reward[0] += smoothness_reward(prev_action, a0)
             reward[0] += collision_penalty(info)
             prev_action = a0
+
+            if reward_bonus_config:
+                agent_idx = reward_bonus_config['agent']
+                bounds = reward_bonus_config['bounds']
+                bonus = reward_bonus_config.get('bonus', 1.0)
+                reward = reward_zone_bonus(next_state, reward, agent_idx, bounds, bonus)
 
             episode_reward += reward
             step += 1
@@ -174,6 +190,10 @@ def run_game(env, algo_list, episode, shuffle_map, map_num,
                     success_steps[1].append(step)
                 else:
                     num_win[2] += 1
+                if not verbose:
+                    print('.', end='')
+                    if i % 50 == 0 or i == episode:
+                        print()
                 break
             state = next_state
 
@@ -182,6 +202,9 @@ def run_game(env, algo_list, episode, shuffle_map, map_num,
     total_reward /= float(episode)
     avg_steps = [np.mean(s) if s else 0 for s in success_steps]
 
+    # -----------------------------
+    # 🧾 결과 콘솔 출력
+    # -----------------------------
     print("\n" + "=" * 50)
     print(f"Map {map_num} Result in {episode} Episodes")
     print("=" * 50)
@@ -197,3 +220,58 @@ def run_game(env, algo_list, episode, shuffle_map, map_num,
     ]
     print(tabulate(data, headers=header, tablefmt='fancy_grid'))
 
+    # -----------------------------
+    # 💾 결과 CSV 자동 저장
+    # -----------------------------
+    result_path = "results.csv"
+    file_exists = os.path.exists(result_path)
+    with open(result_path, "a", newline="") as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(["Map", "Agent0", "Agent1", "Score0", "Score1",
+                             "Wins0", "Wins1", "Draws", "AvgStep0", "AvgStep1"])
+        writer.writerow([map_num, algo_list[0], algo_list[1],
+                         np.round(total_reward[0], 2), np.round(total_reward[1], 2),
+                         num_win[0], num_win[1], num_win[2],
+                         np.round(avg_steps[0], 1), np.round(avg_steps[1], 1)])
+
+# ----------------------------------------------------------------------
+# 🚀 Main
+# ----------------------------------------------------------------------
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Olympics-Running Evaluation Script")
+    parser.add_argument("--my_ai", default='rl', choices=['rl', 'random'])
+    parser.add_argument("--opponent", default='random', choices=['rl', 'random'])
+    parser.add_argument("--episode", type=int, default=50)
+    parser.add_argument("--map", default='all')
+    parser.add_argument("--control_agent", type=int, default=-1)
+    parser.add_argument("--control_zone", nargs=4, type=float, default=[50, 70, 20, 40])
+    parser.add_argument("--reward_agent", type=int, default=-1)
+    parser.add_argument("--reward_bonus", type=float, default=1.0)
+    args = parser.parse_args()
+
+    env_type = "olympics-running"
+    game = make(env_type, conf=None, seed=1)
+
+    shuffle = False if args.map != 'all' else True
+    if not shuffle:
+        game.specify_a_map(int(args.map))
+
+    agent_list = [args.opponent, args.my_ai]
+
+    env_control_config = None
+    if args.control_agent in [0, 1]:
+        env_control_config = {'agent': args.control_agent, 'bounds': args.control_zone}
+
+    reward_bonus_config = None
+    if args.reward_agent in [0, 1]:
+        reward_bonus_config = {
+            'agent': args.reward_agent,
+            'bounds': args.control_zone,
+            'bonus': args.reward_bonus
+        }
+
+    run_game(game, algo_list=agent_list, episode=args.episode,
+             shuffle_map=shuffle, map_num=args.map,
+             env_control_config=env_control_config,
+             reward_bonus_config=reward_bonus_config)
