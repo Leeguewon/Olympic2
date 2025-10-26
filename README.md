@@ -1,4 +1,9 @@
 <img width="378" height="192" alt="스크린샷 2025-10-26 오후 11 46 25" src="https://github.com/user-attachments/assets/1bc9e861-afd7-4414-9d10-da6a3453692e" />
+evaluation_local***.py (주석)
+evaluation_local.py
+파일 2개 있는데
+둘 다 로직은 같고
+결과값 출력만 다릅니다
 
 ## 🧠 전체 코드
 
@@ -191,3 +196,4 @@ def run_game(env, algo_list, episode, shuffle_map, map_num,
          np.round(avg_steps[1], 1) if avg_steps[1] else '-']
     ]
     print(tabulate(data, headers=header, tablefmt='fancy_grid'))
+
