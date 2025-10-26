@@ -151,6 +151,7 @@ def run_game(g, env_name, multi_part_agent_ids, actions_spaces, policy_list, ren
     This function is used to generate log for Vue rendering. Saves .json file
     """
     log_path = os.getcwd() + '/logs/'
+    
     if not os.path.exists(log_path):
         os.mkdir(log_path)
 
