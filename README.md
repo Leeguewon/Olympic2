@@ -7,7 +7,7 @@ evaluation_local.py
 
 ## 🧠 전체 코드
 
-```Python
+```Java
 
 import numpy as np
 import random
@@ -274,6 +274,7 @@ if __name__ == "__main__":
              shuffle_map=shuffle, map_num=args.map,
              env_control_config=env_control_config,
              reward_bonus_config=reward_bonus_config)
+
 
 
 
