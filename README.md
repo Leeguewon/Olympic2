@@ -53,7 +53,7 @@ ACTION_MAP = {
     30: [200, -30], 31: [200, -18], 32: [200, -6], 33: [200, 6], 34: [200, 18], 35: [200, 30]
 }
 
-RENDER = True
+RENDER = False
 
 # ----------------------------------------------------------------------
 # 🎮 행동 선택
@@ -274,6 +274,7 @@ if __name__ == "__main__":
              shuffle_map=shuffle, map_num=args.map,
              env_control_config=env_control_config,
              reward_bonus_config=reward_bonus_config)
+
 
 
 
