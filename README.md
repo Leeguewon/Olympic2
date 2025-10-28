@@ -143,7 +143,7 @@ def run_game(env, algo_list, episode, shuffle_map, map_num,
 
         step = 0
         while True:
-            # 🚀 초반 5스텝 강제 직진 (모든 맵 공통)
+            # 🚀 초반 1스텝 강제 직진 (모든 맵 공통)
             if step < 1:
                 joint_action = []
                 for _ in algo_list:
@@ -274,6 +274,7 @@ if __name__ == "__main__":
              shuffle_map=shuffle, map_num=args.map,
              env_control_config=env_control_config,
              reward_bonus_config=reward_bonus_config)
+
 
 
 
