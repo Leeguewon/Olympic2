@@ -4,7 +4,7 @@ evaluation_local.py
 파일 2개 있는데
 둘 다 로직은 같고
 결과값 출력만 다릅니다
-
+18조
 ## 🧠 전체 코드
 
 ```C
@@ -274,6 +274,7 @@ if __name__ == "__main__":
              shuffle_map=shuffle, map_num=args.map,
              env_control_config=env_control_config,
              reward_bonus_config=reward_bonus_config)
+
 
 
 
